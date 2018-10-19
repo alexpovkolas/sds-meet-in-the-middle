@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <functional>
 
-#define __PROFILE__
+//#define __PROFILE__
 
 #ifdef __PROFILE__
 
@@ -60,10 +60,15 @@ public:
         for (auto it = s.items.begin(); it != s.items.end(); ++it) {
             add_item(*it);
         }
-//        sort(items.begin(), items.end());
     }
 
     struct less_than_by_weight {
+        bool operator()(const Sack &a, const Sack &b) {
+            return a.weight < b.weight;
+        }
+    };
+
+    struct greater_than_by_weight {
         bool operator()(const Sack &a, const Sack &b) {
             return a.weight > b.weight;
         }
@@ -81,7 +86,7 @@ struct better_sack : unary_function<Sack, bool> {
 
 Sack best_sack(vector<Item> &items, VALUE_TYPE weight) {
     // TODO: try to devide another way
-    int left_size = items.size() / 2;
+    int left_size = items.size() / 2 + 1;
     int right_size = items.size() - left_size;
 
     vector<Sack> left(1 << left_size);
@@ -90,7 +95,7 @@ Sack best_sack(vector<Item> &items, VALUE_TYPE weight) {
     for (int i = 0; i < 1 << left_size; ++i) {
         Sack sack;
         for (int j = 0; j < left_size ; ++j) {
-            bool get_item = (i >> j) & 1 > 0;
+            bool get_item = ((i >> j) & 1 ) > 0;
             if (get_item) {
                 sack.add_item(items[j]);
             }
@@ -98,7 +103,7 @@ Sack best_sack(vector<Item> &items, VALUE_TYPE weight) {
         left[i] = sack;
     }
 
-    sort(left.begin(), left.end(), Sack::less_than_by_weight());
+    sort(left.begin(), left.end(), Sack::greater_than_by_weight());
 
     // remove bad options
     for (auto iter = left.begin(); iter != left.end(); ) {
@@ -116,23 +121,28 @@ Sack best_sack(vector<Item> &items, VALUE_TYPE weight) {
     Sack best_left;
     Sack best_right;
 
+    int tt = 1 << right_size;
     for (int i = 0; i < 1 << right_size; ++i) {
         Sack right;
         for (int j = 0; j < right_size ; ++j) {
-            bool get_item = (i >> j) & 1 > 0;
+            bool get_item = ((i >> j) & 1) > 0;
             if (get_item) {
                 right.add_item(items[left_size + j]);
             }
         }
         Sack max_weight(weight - right.get_weight());
-        auto not_less_it = lower_bound(left.begin(), left.end(), max_weight, Sack::less_than_by_weight());
+        auto not_less_it = lower_bound(left.rbegin(), left.rend(), max_weight, Sack::less_than_by_weight());
 
-        if (not_less_it != left.end()) {
-            Sack less_item = not_less_it == left.begin() ? *not_less_it : *--not_less_it;
+        if (not_less_it != left.rend()) {
+            Sack less_item = not_less_it == left.rbegin() ? *not_less_it : *--not_less_it;
             if (best_cost < less_item.get_cost() + right.get_cost() && weight >= less_item.get_weight() + right.get_weight()) {
                 best_cost = less_item.get_cost() + right.get_cost();
                 best_left = less_item;
                 best_right = right;
+
+#ifdef __PROFILE__
+                cout << best_cost << endl;
+#endif
             }
         }
     }
@@ -145,7 +155,6 @@ int main() {
 #ifdef __PROFILE__
     ifstream in("input");
     cin.rdbuf(in.rdbuf());
-
 #endif
 
     int n = 0;
@@ -166,7 +175,6 @@ int main() {
 
 #ifdef __PROFILE__
     cout << endl << result.get_weight() << " " << result.get_cost();
-
 #endif
 
     cout << endl;
