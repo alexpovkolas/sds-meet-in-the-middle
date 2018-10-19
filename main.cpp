@@ -16,14 +16,10 @@ using namespace std;
 typedef long VALUE_TYPE;
 
 struct Item {
-    int id;
+    int id; // TODO: looks like we can remove id
     int weight;
     int cost;
 };
-
-inline bool operator<(const Item& lhs, const Item& rhs) {
-    return lhs.id < rhs.id;
-}
 
 struct Sack {
 private:
@@ -32,6 +28,7 @@ private:
     vector<Item> &items; // TODO: check if we can get some memory leaks
 public:
 
+    Sack(int weight) : weight(weight), cost(0), items(*new vector<Item>()) {}
     Sack(): weight(0), cost(0), items(*new vector<Item>()) {}
     Sack& operator=(const Sack& a) {
         weight = a.weight;
@@ -62,15 +59,17 @@ public:
         for (auto it = s.items.begin(); it != s.items.end(); ++it) {
             add_item(*it);
         }
-        sort(items.begin(), items.end());
+//        sort(items.begin(), items.end());
     }
+
+    struct less_than_by_weight {
+        bool operator()(const Sack &a, const Sack &b) {
+            return a.weight < b.weight;
+        }
+    };
 };
 
-bool compareByWeight(const Sack &a, const Sack &b) {
-    return a.get_weight() < b.get_weight();
-}
-
-struct better_sack : std::unary_function<Sack, bool> {
+struct better_sack : unary_function<Sack, bool> {
     VALUE_TYPE weight;
     VALUE_TYPE cost;
     better_sack(VALUE_TYPE weight, VALUE_TYPE cost) : weight(weight), cost(cost) { }
@@ -79,17 +78,8 @@ struct better_sack : std::unary_function<Sack, bool> {
     }
 };
 
-struct max_weight_sack : std::unary_function<Sack, bool> {
-    VALUE_TYPE weight;
-    max_weight_sack(VALUE_TYPE weight) : weight(weight) { }
-    bool operator()(Sack const& sack) const {
-        return sack.get_weight() < weight;
-    }
-};
-
-
-
-Sack best_sack(vector<Item> &items, int weight) {
+Sack best_sack(vector<Item> &items, VALUE_TYPE weight) {
+    // TODO: try to devide another way
     int left_size = items.size() / 2;
     int right_size = items.size() - left_size;
 
@@ -107,21 +97,20 @@ Sack best_sack(vector<Item> &items, int weight) {
         left[i] = sack;
     }
 
-    sort(left.begin(), left.end(), compareByWeight);
+    sort(left.begin(), left.end(), Sack::less_than_by_weight());
 
     // remove bad options
     for (auto iter = left.begin(); iter != left.end(); ) {
 
-        auto better_one = find_if(iter, left.end(),
-                                                    better_sack(iter->get_weight(), iter->get_cost()));
-        if (better_one == left.end()) {
+        auto better_one = find_if(iter, left.end(), better_sack(iter->get_weight(), iter->get_cost()));
+        if (better_one != left.end()) {
             iter = left.erase(iter);
         } else {
             ++iter;
         }
     }
 
-    // find best pair
+    // find the best pair
     VALUE_TYPE best_cost = 0;
     Sack best_left;
     Sack best_right;
@@ -134,7 +123,8 @@ Sack best_sack(vector<Item> &items, int weight) {
                 right.add_item(items[j]);
             }
         }
-        auto not_less_item = lower_bound(left.begin(), left.end(), max_weight_sack(weight - right.get_weight()));
+        Sack max_weight(weight - right.get_weight());
+        auto not_less_item = lower_bound(left.begin(), left.end(), max_weight, Sack::less_than_by_weight());
 
         if (not_less_item != left.end() && not_less_item != left.begin() ) {
             auto left = --not_less_item;
