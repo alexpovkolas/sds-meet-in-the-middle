@@ -17,7 +17,7 @@ using namespace std;
 typedef long VALUE_TYPE;
 
 struct Item {
-    int id; // TODO: looks like we can remove id
+    int id;
     int weight;
     int cost;
 };
@@ -65,7 +65,7 @@ public:
 
     struct less_than_by_weight {
         bool operator()(const Sack &a, const Sack &b) {
-            return a.weight < b.weight;
+            return a.weight > b.weight;
         }
     };
 };
@@ -98,7 +98,7 @@ Sack best_sack(vector<Item> &items, VALUE_TYPE weight) {
         left[i] = sack;
     }
 
-    sort(left.rbegin(), left.rend(), Sack::less_than_by_weight());
+    sort(left.begin(), left.end(), Sack::less_than_by_weight());
 
     // remove bad options
     for (auto iter = left.begin(); iter != left.end(); ) {
@@ -121,17 +121,17 @@ Sack best_sack(vector<Item> &items, VALUE_TYPE weight) {
         for (int j = 0; j < right_size ; ++j) {
             bool get_item = (i >> j) & 1 > 0;
             if (get_item) {
-                right.add_item(items[j]);
+                right.add_item(items[left_size + j]);
             }
         }
         Sack max_weight(weight - right.get_weight());
-        auto not_less_item = lower_bound(left.begin(), left.end(), max_weight, Sack::less_than_by_weight());
+        auto not_less_it = lower_bound(left.begin(), left.end(), max_weight, Sack::less_than_by_weight());
 
-        if (not_less_item != left.end() && not_less_item != left.begin() ) {
-            auto left = --not_less_item;
-            if (best_cost < left->get_cost() + right.get_cost()) {
-                best_cost = left->get_cost() + right.get_cost();
-                best_left = *left;
+        if (not_less_it != left.end()) {
+            Sack less_item = not_less_it == left.begin() ? *not_less_it : *--not_less_it;
+            if (best_cost < less_item.get_cost() + right.get_cost() && weight >= less_item.get_weight() + right.get_weight()) {
+                best_cost = less_item.get_cost() + right.get_cost();
+                best_left = less_item;
                 best_right = right;
             }
         }
@@ -145,6 +145,7 @@ int main() {
 #ifdef __PROFILE__
     ifstream in("input");
     cin.rdbuf(in.rdbuf());
+
 #endif
 
     int n = 0;
@@ -154,14 +155,19 @@ int main() {
     vector<Item> items(n);
 
     for (int i = 0; i < n; ++i) {
-        items[i].id = i;
+        items[i].id = i + 1;
         cin >> items[i].weight >> items[i].cost;
     }
 
     Sack result = best_sack(items, w);
     cout << result.get_items().size() << endl;
     for (auto it = result.get_items().begin(); it != result.get_items().end(); ++it)
-        cout << it->id;
+        cout << it->id << " ";
+
+#ifdef __PROFILE__
+    cout << endl << result.get_weight() << " " << result.get_cost();
+
+#endif
 
     cout << endl;
 
