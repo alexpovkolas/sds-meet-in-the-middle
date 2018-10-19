@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <functional>
 
+#define __PROFILE__
 
 #ifdef __PROFILE__
 
@@ -89,7 +90,7 @@ Sack best_sack(vector<Item> &items, VALUE_TYPE weight) {
     for (int i = 0; i < 1 << left_size; ++i) {
         Sack sack;
         for (int j = 0; j < left_size ; ++j) {
-            bool get_item = (i >> j) & 1;
+            bool get_item = (i >> j) & 1 > 0;
             if (get_item) {
                 sack.add_item(items[j]);
             }
@@ -97,7 +98,7 @@ Sack best_sack(vector<Item> &items, VALUE_TYPE weight) {
         left[i] = sack;
     }
 
-    sort(left.begin(), left.end(), Sack::less_than_by_weight());
+    sort(left.rbegin(), left.rend(), Sack::less_than_by_weight());
 
     // remove bad options
     for (auto iter = left.begin(); iter != left.end(); ) {
@@ -118,7 +119,7 @@ Sack best_sack(vector<Item> &items, VALUE_TYPE weight) {
     for (int i = 0; i < 1 << right_size; ++i) {
         Sack right;
         for (int j = 0; j < right_size ; ++j) {
-            bool get_item = (i >> j) & 1;
+            bool get_item = (i >> j) & 1 > 0;
             if (get_item) {
                 right.add_item(items[j]);
             }
