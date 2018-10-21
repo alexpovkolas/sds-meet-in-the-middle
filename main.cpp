@@ -19,7 +19,7 @@ using namespace std;
 typedef long long VALUE_TYPE;
 
 struct Item {
-    int id;
+    short id;
     int weight;
     int cost;
 };
@@ -31,7 +31,7 @@ private:
     vector<Item> *items; // TODO: check if we can get some memory leaks
 public:
 
-    Sack(int weight) : weight(weight), cost(0), items(new vector<Item>()) {}
+    Sack(VALUE_TYPE weight) : weight(weight), cost(0), items(new vector<Item>()) {}
     Sack(): weight(0), cost(0), items(new vector<Item>()) {}
     Sack& operator=(const Sack& a) {
         weight = a.weight;
@@ -101,7 +101,7 @@ Sack best_sack(vector<Item> &items, VALUE_TYPE weight) {
     vector<Sack> left(left_size);
 
     // generate all the subsets
-    for (size_t i = 0; i < left_size; ++i) {
+    for (size_t i = 0; i <= left_size; ++i) {
         Sack sack;
         for (size_t j = 0; j < left_part ; ++j) {
             bool get_item = ((i >> j) & mask ) > 0;
@@ -115,7 +115,6 @@ Sack best_sack(vector<Item> &items, VALUE_TYPE weight) {
     sort(left.begin(), left.end(), Sack::greater_than_by_weight());
 
     // remove bad options
-    size_t counter = 0;
     vector<Sack> optimal_left;
     for (auto iter = left.begin(); iter != left.end(); ++iter) {
 
@@ -131,7 +130,7 @@ Sack best_sack(vector<Item> &items, VALUE_TYPE weight) {
     Sack best_left;
     Sack best_right;
 
-    for (size_t i = 0; i < right_size; ++i) {
+    for (size_t i = 0; i <= right_size; ++i) {
         Sack right;
         for (size_t j = 0; j < right_part ; ++j) {
             bool get_item = ((i >> j) & mask) > 0;
