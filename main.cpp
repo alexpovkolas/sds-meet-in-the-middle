@@ -2,6 +2,8 @@
 #include <vector>
 #include <algorithm>
 #include <functional>
+#include <math.h>
+
 
 //#define __PROFILE__
 
@@ -14,7 +16,7 @@
 
 using namespace std;
 
-typedef long VALUE_TYPE;
+typedef long long VALUE_TYPE;
 
 struct Item {
     int id;
@@ -26,11 +28,11 @@ struct Sack {
 private:
     VALUE_TYPE weight;
     VALUE_TYPE cost;
-    vector<Item> &items; // TODO: check if we can get some memory leaks
+    vector<Item> *items; // TODO: check if we can get some memory leaks
 public:
 
-    Sack(int weight) : weight(weight), cost(0), items(*new vector<Item>()) {}
-    Sack(): weight(0), cost(0), items(*new vector<Item>()) {}
+    Sack(int weight) : weight(weight), cost(0), items(new vector<Item>()) {}
+    Sack(): weight(0), cost(0), items(new vector<Item>()) {}
     Sack& operator=(const Sack& a) {
         weight = a.weight;
         cost = a.cost;
@@ -41,7 +43,7 @@ public:
     inline void add_item(Item item) {
         weight += item.weight;
         cost += item.cost;
-        items.push_back(item);
+        items->push_back(item);
     }
 
     inline VALUE_TYPE get_weight() const {
@@ -53,11 +55,11 @@ public:
     }
 
     inline vector<Item>& get_items() const {
-        return items;
+        return *items;
     }
 
     inline void append(const Sack &s) {
-        for (auto it = s.items.begin(); it != s.items.end(); ++it) {
+        for (auto it = s.items->begin(); it != s.items->end(); ++it) {
             add_item(*it);
         }
     }
@@ -73,6 +75,8 @@ public:
             return a.weight > b.weight;
         }
     };
+
+
 };
 
 struct better_sack : unary_function<Sack, bool> {
@@ -86,16 +90,21 @@ struct better_sack : unary_function<Sack, bool> {
 
 Sack best_sack(vector<Item> &items, VALUE_TYPE weight) {
     // TODO: try to devide another way
-    int left_size = items.size() / 2 + 1;
-    int right_size = items.size() - left_size;
+    size_t left_part = items.size() / 2;
+    size_t right_part = items.size() - left_part;
+    size_t left_size = pow(2, left_part);
+    size_t right_size = pow(2, right_part);
+    size_t mask = 1;
 
-    vector<Sack> left(1 << left_size);
+
+
+    vector<Sack> left(left_size);
 
     // generate all the subsets
-    for (int i = 0; i < 1 << left_size; ++i) {
+    for (size_t i = 0; i < left_size; ++i) {
         Sack sack;
-        for (int j = 0; j < left_size ; ++j) {
-            bool get_item = ((i >> j) & 1 ) > 0;
+        for (size_t j = 0; j < left_part ; ++j) {
+            bool get_item = ((i >> j) & mask ) > 0;
             if (get_item) {
                 sack.add_item(items[j]);
             }
@@ -106,31 +115,31 @@ Sack best_sack(vector<Item> &items, VALUE_TYPE weight) {
     sort(left.begin(), left.end(), Sack::greater_than_by_weight());
 
     // remove bad options
-    for (auto iter = left.begin(); iter != left.end(); ) {
+    size_t counter = 0;
+    vector<Sack> optimal_left;
+    for (auto iter = left.begin(); iter != left.end(); ++iter) {
 
         auto better_one = find_if(iter, left.end(), better_sack(iter->get_weight(), iter->get_cost()));
-        if (better_one != left.end()) {
-            iter = left.erase(iter);
-        } else {
-            ++iter;
+        if (better_one == left.end()) {
+            optimal_left.push_back(*iter);
         }
     }
+    left = optimal_left;
 
     // find the best pair
     VALUE_TYPE best_cost = 0;
     Sack best_left;
     Sack best_right;
 
-    int tt = 1 << right_size;
-    for (int i = 0; i < 1 << right_size; ++i) {
+    for (size_t i = 0; i < right_size; ++i) {
         Sack right;
-        for (int j = 0; j < right_size ; ++j) {
-            bool get_item = ((i >> j) & 1) > 0;
+        for (size_t j = 0; j < right_part ; ++j) {
+            bool get_item = ((i >> j) & mask) > 0;
             if (get_item) {
-                right.add_item(items[left_size + j]);
+                right.add_item(items[left_part + j]);
             }
         }
-        Sack max_weight(weight - right.get_weight());
+        Sack max_weight(weight - right.get_weight() + 1);
         auto not_less_it = lower_bound(left.rbegin(), left.rend(), max_weight, Sack::less_than_by_weight());
 
         if (not_less_it != left.rend()) {
